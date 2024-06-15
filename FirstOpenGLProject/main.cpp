@@ -9,6 +9,22 @@ float triangle[] = {
      .5f, -.5f, .0f  // bottom right
 };
 
+// Vertex data of rectangle
+float rectangle[] = {
+     0.5f,  0.5f, 0.0f,  // top right
+     0.5f, -0.5f, 0.0f,  // bottom right
+    -0.5f, -0.5f, 0.0f,  // bottom left
+    -0.5f,  0.5f, 0.0f   // top left 
+};
+
+// Order in which each vertex is going to be drawn
+// This exists to prevent storing duplicate vertex data, so we store these only once and then tell OpenGL to render
+// in a specific order one or more times (through EBOs), hence the duplicated ones and threes below
+unsigned int rectangleIndices[] = {
+    0, 1, 3,   // first triangle
+    1, 2, 3    // second triangle
+};
+
 // Simple vertex shader - responsible for handling vertices positions
 const char* vertexShaderSource = 
     "#version 330 core\n"
@@ -44,6 +60,16 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS) {
         glfwSetWindowAttrib(window, GLFW_DECORATED, GL_FALSE);
         glfwMaximizeWindow(window);
+    }
+
+    // Set normal rendering on F1
+    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    // Set wireframe on F2
+    if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
 }
 
@@ -130,17 +156,30 @@ int main() {
 
     // Vertex Buffer Object - stores data that gets sent to the GPU all at once (transiting data from CPU to GPU is slow)
     // Vertex Array Object - stores vertex attribute calls
-    unsigned int VBO, VAO;
+    unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO); // Generates VAO
-    glGenBuffers(1, &VBO);      // Generates the buffer id
+    glGenBuffers(1, &VBO);      // Generates the Vertex array buffer object
+    glGenBuffers(1, &EBO);      // Generates the Element array buffer object
 
     glBindVertexArray(VAO);
 
+    /* Single triangle specific
     // Tells OpenGL the buffer type (in this case, a vertex buffer is GL_ARRAY_BUFFER)
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
     // Copies the data provided to a buffer 
     glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), triangle, GL_STATIC_DRAW);
+
+    // Tells OpenGL the format of the vertex data
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    */
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle), rectangle, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangleIndices), rectangleIndices, GL_STATIC_DRAW);
 
     // Tells OpenGL the format of the vertex data
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
@@ -158,7 +197,10 @@ int main() {
 
         glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        
+        // glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
 
         glfwSwapBuffers(window); // Swaps front and back buffer
         glfwPollEvents(); // Handle events like mouse movement or keyboard input

@@ -3,14 +3,14 @@
 #include <iostream>
 
 // Vertex data of a primitive triangle
-float triangle[] = {
+const float triangle[] = {
      .0f,  .5f, .0f, // top
     -.5f, -.5f, .0f, // bottom left
      .5f, -.5f, .0f  // bottom right
 };
 
 // Vertex data of rectangle
-float rectangle[] = {
+const float rectangle[] = {
      0.5f,  0.5f, 0.0f,  // top right
      0.5f, -0.5f, 0.0f,  // bottom right
     -0.5f, -0.5f, 0.0f,  // bottom left
@@ -20,7 +20,7 @@ float rectangle[] = {
 // Order in which each vertex is going to be drawn
 // This exists to prevent storing duplicate vertex data, so we store these only once and then tell OpenGL to render
 // in a specific order one or more times (through EBOs), hence the duplicated ones and threes below
-unsigned int rectangleIndices[] = {
+unsigned const int rectangleIndices[] = {
     0, 1, 3,   // first triangle
     1, 2, 3    // second triangle
 };
@@ -71,6 +71,41 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
+}
+
+template <size_t N>
+void bufferVertexArray(const float (&vertexData)[N]) {
+    unsigned int VBO;
+
+    // Generates the Vertex array buffer object
+    glGenBuffers(1, &VBO);
+
+    // Tells OpenGL the buffer type (in this case, a vertex buffer is GL_ARRAY_BUFFER)
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    // Copies the data provided to a buffer
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
+
+    // Tells OpenGL the format of the vertex data
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+}
+
+template <size_t N, size_t I>
+void bufferIndexedVertexArray(const float(&vertexData)[N], unsigned const int (&indices)[I]) {
+    unsigned int VBO, EBO;
+
+    glGenBuffers(1, &VBO); // Generates the Vertex array buffer object
+    glGenBuffers(1, &EBO); // Generates the Element array buffer object
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
 }
 
 int main() {
@@ -156,34 +191,13 @@ int main() {
 
     // Vertex Buffer Object - stores data that gets sent to the GPU all at once (transiting data from CPU to GPU is slow)
     // Vertex Array Object - stores vertex attribute calls
-    unsigned int VBO, VAO, EBO;
+    unsigned int VAO;
     glGenVertexArrays(1, &VAO); // Generates VAO
-    glGenBuffers(1, &VBO);      // Generates the Vertex array buffer object
-    glGenBuffers(1, &EBO);      // Generates the Element array buffer object
 
     glBindVertexArray(VAO);
 
-    /* Single triangle specific
-    // Tells OpenGL the buffer type (in this case, a vertex buffer is GL_ARRAY_BUFFER)
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    // Copies the data provided to a buffer 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), triangle, GL_STATIC_DRAW);
-
-    // Tells OpenGL the format of the vertex data
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    */
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(rectangle), rectangle, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rectangleIndices), rectangleIndices, GL_STATIC_DRAW);
-
-    // Tells OpenGL the format of the vertex data
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    //bufferVertexArray(triangle);
+    bufferIndexedVertexArray(rectangle, rectangleIndices);
 
     // Unbinds the vertex array after use
     glBindVertexArray(0);
@@ -198,7 +212,7 @@ int main() {
         glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
         
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
+        //glDrawArrays(GL_TRIANGLES, 0, 3);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
